@@ -39,7 +39,6 @@ int WINAPI WinMain(HINSTANCE _hInstance,
 
     return msg.wParam;
 }
-
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
     switch (uMsg)
@@ -59,15 +58,6 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
         case VK_ESCAPE:
             PostQuitMessage(0);
             break;
-        case VK_SPACE:
-            ob.MoveVec.y = 2;
-            break;
-        case 65:
-            ob.MoveVec.x = -0.5;
-            break;
-        case 68:
-            ob.MoveVec.x = 0.5;
-            break;
         }
         break;
     }
@@ -76,12 +66,6 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
         cout << "wParam2 = " << wParam << endl;
         switch (wParam)
         {
-        case 65:
-            ob.MoveVec.x = 0;
-            break;
-        case 68:
-            ob.MoveVec.x = 0;
-            break;
         }
         break;
     }
@@ -95,7 +79,6 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 
     return 0;
 }
-
 void InitWindow() {
     /* register window class */
     wcex.cbSize = sizeof(WNDCLASSEX);
@@ -136,33 +119,56 @@ void InitWindow() {
 
     Init();
 }
-
-
-void Draw(Object& object);
-
 void Init() {
     glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
     glOrtho(0, 30, 0, 30, 0, 1);
-    ob.pos = { 10,1 };
-    ob.pos2 = { 4,8 };
+
+    obj.pos = { 20,0 };
+    obj.pos2 = { 4,4 };
+
+    player.pos = { 10,1 };
+    player.pos2 = { 4,8 };
+
+
+    DrawList.push_back(&player);
+    DrawList.push_back(&obj);
+
+
     RedirectIOToConsole();
-}
-void WndResize(LPARAM lParam) {
-    glLoadIdentity();
-    glViewport(0, 0, LOWORD(lParam), HIWORD(lParam));
-    glOrtho(0, LOWORD(lParam)/10, 0, HIWORD(lParam)/10, 0, 1);
+    HANDLE hThr = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)FixedUpdate, 0, 0, NULL);
 }
 void MainLoop() {
     glClear(GL_COLOR_BUFFER_BIT);
 
-
-    Draw(ob);
-    CalculatePhisic(ob);
-    ob.Move();
-
+    for (int i = 0; i < DrawList.size(); i++)
+    {
+        Draw(*DrawList[i]);
+    }
 
     SwapBuffers(hDC);
     Sleep(1);
+}
+void FixedUpdate() {
+    Now = duration_cast<microseconds>(system_clock::now().time_since_epoch());
+    int error = 0;
+    while (true)
+    {
+        if (duration_cast<microseconds>(system_clock::now().time_since_epoch()).count() - Now.count() >= 10000) {
+
+            CalculatePhisic(player);
+
+            Pos oldPos = player.pos;
+
+            player.Move();
+            if (CheckColisions(player, obj)) {
+                cout << "BAN\n";
+                player.pos = oldPos;
+            }
+
+
+            Now = duration_cast<microseconds>(system_clock::now().time_since_epoch());
+        };
+    }
 }
 void Draw(Object& object) {
     glPushMatrix();
@@ -181,10 +187,20 @@ void Draw(Object& object) {
 
     glPopMatrix();
 }
-void CalculatePhisic(Object& object) {
-    if (object.pos.y > 0) {
-        object.MoveVec.y = object.MoveVec.y - g;
+void CalculatePhisic(Entity& entity) {
+    if (entity.pos.y > 0) {
+        entity.MoveVec.y = entity.MoveVec.y - g;
     }
+}
+bool CheckColisions(Object& object, Object& object2) {
+    float xA[2] = { object.pos.x,object.pos.x + object.pos2.x };
+    float xB[2] = { object2.pos.x,object2.pos.x + object2.pos2.x };
+
+    float yA[2] = { object.pos.y,object.pos.y + object.pos2.y };
+    float yB[2] = { object2.pos.y,object2.pos.y + object2.pos2.y };
+
+    if (xA[1] < xB[0] || yA[1] < yB[0] || yA[0] > yB[1] || xA[0] > xB[1]) return false;
+    return true;
 }
 
 void EnableOpenGL(HWND hwnd, HDC* hDC, HGLRC* hRC)
@@ -223,4 +239,3 @@ void DisableOpenGL(HWND hwnd, HDC hDC, HGLRC hRC)
     wglDeleteContext(hRC);
     ReleaseDC(hwnd, hDC);
 }
-
