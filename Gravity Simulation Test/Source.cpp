@@ -159,11 +159,102 @@ void FixedUpdate() {
 
             Pos oldPos = player.pos;
 
-            player.Move();
-            if (CheckColisions(player, obj)) {
-                cout << "BAN\n";
-                player.pos = oldPos;
+            //player.Move();
+            
+            bool fixed = false;
+
+            if (CheckColisions(player, obj, player.MoveVec, 0)) {
+
+                for (int j = 0; j < 4 && !fixed; j++)
+                {
+                    Pos MovePos1, MovePos2;
+                    switch (j)
+                    {
+                    case 0: // Right Down (1;0)
+                        MovePos1 = { player.pos.x + player.pos2.x, player.pos.y };
+                        MovePos2 = { player.pos.x + player.pos2.x + player.MoveVec.x, player.pos.y + player.MoveVec.y };
+                        break;
+                    case 1: // Left Down (0;0)
+                        MovePos1 = { player.pos.x,player.pos.y };
+                        MovePos2 = { player.pos.x + player.MoveVec.x,player.pos.y + player.MoveVec.y };
+                        break;
+                    case 2: // Left Up (0;1)
+                        MovePos1 = { player.pos.x,player.pos.y + player.pos2.y};
+                        MovePos2 = { player.pos.x + player.MoveVec.x,player.pos.y + player.pos2.y + player.MoveVec.y };
+                        break;
+                    case 3: // Right Up (1;1)
+                        MovePos1 = { player.pos.x + player.pos2.x,player.pos.y + player.pos2.y };
+                        MovePos2 = { player.pos.x + player.pos2.x + player.MoveVec.x, player.pos.y + player.pos2.y + player.MoveVec.y };
+                        break;
+                    }
+                    for (int i = 0; i < 4 && !fixed; i++)
+                    {
+                        Pos BoxLinePos1, BoxLinePos2;
+                        switch (i)
+                        {
+                        case 0: //Left Side
+                            BoxLinePos1 = { obj.pos.x,obj.pos.y };
+                            BoxLinePos2 = { obj.pos.x,obj.pos.y + obj.pos2.y };
+                            break;
+                        case 1: // Top Side
+                            BoxLinePos1 = { obj.pos.x,obj.pos.y + obj.pos2.y };
+                            BoxLinePos2 = { obj.pos.x + obj.pos2.x,obj.pos.y + obj.pos2.y };
+                            break;
+                        case 2: // Right Side
+                            BoxLinePos1 = { obj.pos.x + obj.pos2.x,obj.pos.y + obj.pos2.y };
+                            BoxLinePos2 = { obj.pos.x + obj.pos2.x,obj.pos.y };
+                            break;
+                        case 3: // Down Side
+                            BoxLinePos1 = { obj.pos.x + obj.pos2.x,obj.pos.y };
+                            BoxLinePos2 = { obj.pos.x,obj.pos.y };
+                            break;
+                        }
+                        if (LineSegmentsIntersection(MovePos1, MovePos2, BoxLinePos1, BoxLinePos2)) {
+                            if (i == 3) {
+                                 cout << "BAN\n";
+                            }
+                            cout << "BEST TEST: " << i << endl;
+                            cout << "X = " << Intersect(MovePos1, MovePos2, BoxLinePos1, BoxLinePos2).x << " Y = " << Intersect(MovePos1, MovePos2, BoxLinePos1, BoxLinePos2).y << endl;
+                            Pos tPos = Intersect(MovePos1, MovePos2, BoxLinePos1, BoxLinePos2);
+                            switch (j)
+                            {
+                            case 0:
+                                tPos = { tPos.x - player.pos2.x,  tPos.y };
+                                break;
+                            case 1:
+                                break;
+                            case 2:
+                                tPos = { tPos.x,  tPos.y - player.pos2.y };
+                                break;
+                            case3:
+                                tPos = { tPos.x - player.pos2.x,  tPos.y - player.pos2.y };
+                                break;
+                            }
+                            switch (i)
+                            {
+                            case 0:
+                            case 2:
+                                player.MoveVec.x = 0;
+                                break;
+                            case 1:
+                            case 3:
+                                player.MoveVec.y = 0;
+                                break;        
+                            }
+                            player.pos = tPos;
+                            fixed = true;
+                            break;
+                        }
+                    }
+                }
+                player.OnGround = true;
             }
+            else if (!CheckColisions(player, obj, player.MoveVec, 0))
+            {
+                cout << "BAN2\n";
+                player.OnGround = false;
+            }
+            player.Move();
 
 
             Now = duration_cast<microseconds>(system_clock::now().time_since_epoch());
@@ -188,16 +279,17 @@ void Draw(Object& object) {
     glPopMatrix();
 }
 void CalculatePhisic(Entity& entity) {
-    if (entity.pos.y > 0) {
+    if (entity.pos.y > 0 && !entity.OnGround) {
         entity.MoveVec.y = entity.MoveVec.y - g;
     }
 }
-bool CheckColisions(Object& object, Object& object2) {
-    float xA[2] = { object.pos.x,object.pos.x + object.pos2.x };
-    float xB[2] = { object2.pos.x,object2.pos.x + object2.pos2.x };
+bool CheckColisions(Object& object, Object& object2, Pos MoveVec, float n) {
+    Pos nextPos = object.pos + MoveVec;
+    float xA[2] = { nextPos.x + n,nextPos.x + object.pos2.x - n};
+    float xB[2] = { object2.pos.x ,object2.pos.x + object2.pos2.x };
 
-    float yA[2] = { object.pos.y,object.pos.y + object.pos2.y };
-    float yB[2] = { object2.pos.y,object2.pos.y + object2.pos2.y };
+    float yA[2] = { nextPos.y + n,nextPos.y + object.pos2.y - n};
+    float yB[2] = { object2.pos.y ,object2.pos.y + object2.pos2.y };
 
     if (xA[1] < xB[0] || yA[1] < yB[0] || yA[0] > yB[1] || xA[0] > xB[1]) return false;
     return true;
