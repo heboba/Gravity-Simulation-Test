@@ -24,6 +24,7 @@
     <ProjectGuid>{e7107d24-a52b-46cd-9b2a-7bac3325390f}</ProjectGuid>
     <RootNamespace>Gravity_Simulation_Test</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+    <ProjectName>Simple 2D game engine</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">

@@ -166,15 +166,6 @@ Type CheckColSide(Entity &entity, Object &object, Pos VecMove) {
 
     return (Type)404;
 }
-bool FindObject(Pos pos, Object** findedObject) {
-    for (auto i : DrawList) {
-        if (CheckColisions(pos, *i)) {
-            *findedObject = i;
-            return true;
-        }
-    }
-    return false;
-}
 
 //Colisions Check
 bool CheckColisions(Object& object, Object& object2, Pos MoveVec, float n) {
@@ -203,7 +194,7 @@ void CalculatePhisic(Entity& entity) {
         entity.pos.y = 0;
         entity.MoveVec.y = 0;
     }
-    if (entity.pos.y > 0 && !player.OnGround && !Moving) {
+    if (entity.pos.y > 0 && !entity.OnGround && !Moving) {
         entity.MoveVec.y = entity.MoveVec.y - g;
     }
 }

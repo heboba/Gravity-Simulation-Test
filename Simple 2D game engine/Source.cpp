@@ -231,3 +231,12 @@ void FixedUpdate() {
         }
     }
 }
+bool FindObject(Pos pos, Object** findedObject) {
+    for (auto i : DrawList) {
+        if (CheckColisions(pos, *i)) {
+            *findedObject = i;
+            return true;
+        }
+    }
+    return false;
+}
