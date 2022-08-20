@@ -4,6 +4,43 @@
 #include <iostream>
 #include "Varibles.h"
 
+void EnableOpenGL(HWND hwnd, HDC* hDC, HGLRC* hRC)
+{
+    PIXELFORMATDESCRIPTOR pfd;
+
+    int iFormat;
+
+    /* get the device context (DC) */
+    *hDC = GetDC(hwnd);
+
+    /* set the pixel format for the DC */
+    ZeroMemory(&pfd, sizeof(pfd));
+
+    pfd.nSize = sizeof(pfd);
+    pfd.nVersion = 1;
+    pfd.dwFlags = PFD_DRAW_TO_WINDOW |
+        PFD_SUPPORT_OPENGL | PFD_DOUBLEBUFFER;
+    pfd.iPixelType = PFD_TYPE_RGBA;
+    pfd.cColorBits = 24;
+    pfd.cDepthBits = 16;
+    pfd.iLayerType = PFD_MAIN_PLANE;
+
+    iFormat = ChoosePixelFormat(*hDC, &pfd);
+
+    SetPixelFormat(*hDC, iFormat, &pfd);
+
+    /* create and enable the render context (RC) */
+    *hRC = wglCreateContext(*hDC);
+
+    wglMakeCurrent(*hDC, *hRC);
+}
+void DisableOpenGL(HWND hwnd, HDC hDC, HGLRC hRC)
+{
+    wglMakeCurrent(NULL, NULL);
+    wglDeleteContext(hRC);
+    ReleaseDC(hwnd, hDC);
+}
+
 void RedirectIOToConsole()
 {
     AllocConsole();
@@ -20,7 +57,11 @@ void WndResize(LPARAM lParam) {
     glViewport(0, 0, LOWORD(lParam), HIWORD(lParam));
     glOrtho(0, LOWORD(lParam) / Size, 0, HIWORD(lParam) / Size, 0, 1);
 }
+Pos GetMousePos(LPARAM lParam) {
+    return { float(LOWORD(lParam) / Size), float((WndHeight - HIWORD(lParam)) / Size) };
+};
 
+//Clever unused Stuff
 bool IsParall(float a1, float a2, float b1, float b2)
 {
     if ((a1 / a2) == (b1 / b2))
@@ -59,6 +100,7 @@ bool LineSegmentsIntersection(Pos pos1, Pos pos2, Pos pos3, Pos pos4)
     return t >= 0. && t <= 1. && u >= 0. && u <= 1.;
 }
 
+//For Colisions
 float GetDist(float cord1, float cord2, float cord3, float cord4)
 {
     if (cord1 > cord3 + cord4) return cord1 - (cord3 + cord4);
@@ -66,7 +108,6 @@ float GetDist(float cord1, float cord2, float cord3, float cord4)
     //return cord1 - cord3;
     return 0;
 }
-
 bool ResolveColisions(Entity& entity, Object& object, Pos VecMove) {
 
     if (CheckColisions(entity, object)) {
@@ -114,7 +155,6 @@ bool ResolveColisions(Entity& entity, Object& object, Pos VecMove) {
         return false;
     }
 }
-
 Type CheckColSide(Entity &entity, Object &object, Pos VecMove) {
     float h = GetDist(entity.pos.y, entity.pos2.y, object.pos.y, object.pos2.y);
     float d = GetDist(entity.pos.x, entity.pos2.x, object.pos.x, object.pos2.x);
@@ -125,4 +165,64 @@ Type CheckColSide(Entity &entity, Object &object, Pos VecMove) {
     if (h / entity.MoveVec.x <= d / entity.MoveVec.y) return VecMove.x > 0 ? Left : Right;
 
     return (Type)404;
+}
+bool FindObject(Pos pos, Object** findedObject) {
+    for (auto i : DrawList) {
+        if (CheckColisions(pos, *i)) {
+            *findedObject = i;
+            return true;
+        }
+    }
+    return false;
+}
+
+//Colisions Check
+bool CheckColisions(Object& object, Object& object2, Pos MoveVec, float n) {
+    Pos nextPos = object.pos + MoveVec;
+    float xA[2] = { nextPos.x,nextPos.x + object.pos2.x };
+    float xB[2] = { object2.pos.x ,object2.pos.x + object2.pos2.x };
+
+    float yA[2] = { nextPos.y + n,nextPos.y + object.pos2.y };
+    float yB[2] = { object2.pos.y ,object2.pos.y + object2.pos2.y };
+
+    if (xA[1] < xB[0] || yA[1] < yB[0] || yA[0] > yB[1] || xA[0] > xB[1]) return false;
+    return true;
+}
+bool CheckColisions(Pos pos, Object& object) {
+    float xB[2] = { object.pos.x ,object.pos.x + object.pos2.x };
+    float yB[2] = { object.pos.y ,object.pos.y + object.pos2.y };
+
+    if (pos.x < xB[0] || pos.y < yB[0] || pos.y > yB[1] || pos.x > xB[1]) return false;
+    return true;
+}
+
+//For Phisic
+void CalculatePhisic(Entity& entity) {
+    entity.pos = entity.pos + entity.MoveVec;
+    if (entity.pos.y < 0) {
+        entity.pos.y = 0;
+        entity.MoveVec.y = 0;
+    }
+    if (entity.pos.y > 0 && !player.OnGround && !Moving) {
+        entity.MoveVec.y = entity.MoveVec.y - g;
+    }
+}
+
+//Work with OpenGl
+void Draw(Object& object) {
+    glPushMatrix();
+    glColor3f(object.color[0], object.color[1], object.color[2]);
+
+    glTranslatef(object.pos.x, object.pos.y, 0);
+
+    glBegin(GL_TRIANGLE_FAN);
+
+    glVertex2f(0, 0);
+    glVertex2f(0, object.pos2.y);
+    glVertex2f(object.pos2.x, object.pos2.y);
+    glVertex2f(object.pos2.x, 0);
+
+    glEnd();
+
+    glPopMatrix();
 }

@@ -4,6 +4,8 @@
 #include <chrono>
 #include <thread>
 #include <vector>
+#include <math.h>
+#include <cmath>
 #pragma comment(lib, "opengl32.lib")
 
 #include "Prototypes.h"

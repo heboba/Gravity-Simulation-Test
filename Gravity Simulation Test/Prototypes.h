@@ -5,6 +5,7 @@
 LRESULT CALLBACK WindowProc(HWND, UINT, WPARAM, LPARAM);
 void EnableOpenGL(HWND hwnd, HDC*, HGLRC*);
 void DisableOpenGL(HWND, HDC, HGLRC);
+Pos GetMousePos(LPARAM lParam);
 void InitWindow();
 void MainLoop();
 void Init();
@@ -22,3 +23,4 @@ Type CheckColSide(Entity& entity, Object& object, Pos VecMove);
 bool IsParall(float a1, float a2, float b1, float b2);
 Pos Intersect(Pos pos1, Pos pos2, Pos pos3, Pos pos4);
 bool LineSegmentsIntersection(Pos pos1, Pos pos2, Pos pos3, Pos pos4);
+

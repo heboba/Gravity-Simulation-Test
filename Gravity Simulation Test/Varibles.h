@@ -1,5 +1,7 @@
 #pragma once
 
+bool Moving = false;
+
 int WndHeight;
 int WndWight;
 float g = 0.1;

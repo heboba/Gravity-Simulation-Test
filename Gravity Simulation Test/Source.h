@@ -21,6 +21,8 @@ Object obj2;
 Object obj3;
 Object* Active;
 
+Pos MouseRelativeCoordinates;
+
 
 
 vector <Object*> DrawList;
