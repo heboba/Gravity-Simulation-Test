@@ -13,9 +13,13 @@ HGLRC hRC;
 MSG msg;
 BOOL bQuit = FALSE;
 
+
 microseconds Now;
 Player player;
 Object obj;
+Object obj2;
+Object obj3;
+Object* Active;
 
 
 

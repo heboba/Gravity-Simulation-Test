@@ -2,6 +2,7 @@
 #include <windows.h>
 #include <filesystem>
 #include <iostream>
+#include "Varibles.h"
 
 void RedirectIOToConsole()
 {
@@ -14,8 +15,10 @@ void RedirectIOToConsole()
 }
 void WndResize(LPARAM lParam) {
     glLoadIdentity();
+    WndHeight = HIWORD(lParam);
+    WndWight = LOWORD(lParam);
     glViewport(0, 0, LOWORD(lParam), HIWORD(lParam));
-    glOrtho(0, LOWORD(lParam) / 10, 0, HIWORD(lParam) / 10, 0, 1);
+    glOrtho(0, LOWORD(lParam) / Size, 0, HIWORD(lParam) / Size, 0, 1);
 }
 
 bool IsParall(float a1, float a2, float b1, float b2)
@@ -54,4 +57,72 @@ bool LineSegmentsIntersection(Pos pos1, Pos pos2, Pos pos3, Pos pos4)
     double t = (_2 * _6 - _5 * _3) / d;
     double u = (_2 * _4 - _5 * _1) / d;
     return t >= 0. && t <= 1. && u >= 0. && u <= 1.;
+}
+
+float GetDist(float cord1, float cord2, float cord3, float cord4)
+{
+    if (cord1 > cord3 + cord4) return cord1 - (cord3 + cord4);
+    if (cord1 + cord2 < cord3) return cord3 - (cord1 + cord2);
+    //return cord1 - cord3;
+    return 0;
+}
+
+bool ResolveColisions(Entity& entity, Object& object, Pos VecMove) {
+
+    if (CheckColisions(entity, object)) {
+        while (CheckColisions(entity,object))
+        {
+            entity.pos.y += 1;
+        }
+        return true;
+    }
+
+
+
+    Type t = CheckColSide(entity, object, VecMove);
+    float d = 0, d2 = 0, h = 0, h2 = 0, kof = 0;
+
+    switch (t)
+    {
+    case Top:
+        h = GetDist(entity.pos.y, entity.pos2.y, object.pos.y, object.pos2.y);
+        h2 = entity.pos.y + entity.pos2.y - (entity.pos.y + entity.pos2.y + entity.MoveVec.y);
+
+        kof = (1 - h / h2) + 0.0001;
+        entity.MoveVec = { entity.MoveVec.x - entity.MoveVec.x * kof,entity.MoveVec.y - entity.MoveVec.y * kof };
+        return true;
+    case Bottom:
+        h = GetDist(entity.pos.y, entity.pos2.y, object.pos.y, object.pos2.y);
+        h2 = entity.pos.y + entity.pos2.y + entity.MoveVec.y - (entity.pos.y + entity.pos2.y);
+
+        kof = (1 - h / h2) + 0.0001;
+        entity.MoveVec = { entity.MoveVec.x - entity.MoveVec.x * kof,entity.MoveVec.y - entity.MoveVec.y * kof };
+        return true;
+    case Left:
+        d = GetDist(entity.pos.x, entity.pos2.x, object.pos.x, object.pos2.x);
+        d2 = entity.pos.x + entity.pos2.x + entity.MoveVec.x - (entity.pos.x + entity.pos2.x);
+
+        kof = (1 - d / d2) + 0.0001;
+        entity.MoveVec = { entity.MoveVec.x - entity.MoveVec.x * kof,entity.MoveVec.y};
+        return false;
+    case Right:
+        d = GetDist(entity.pos.x, entity.pos2.x, object.pos.x, object.pos2.x);
+        d2 = entity.pos.x + entity.pos2.x - (entity.pos.x + entity.pos2.x + entity.MoveVec.x);
+
+        kof = (1 - d / d2) + 0.0001;
+        entity.MoveVec = { entity.MoveVec.x - entity.MoveVec.x * kof,entity.MoveVec.y };
+        return false;
+    }
+}
+
+Type CheckColSide(Entity &entity, Object &object, Pos VecMove) {
+    float h = GetDist(entity.pos.y, entity.pos2.y, object.pos.y, object.pos2.y);
+    float d = GetDist(entity.pos.x, entity.pos2.x, object.pos.x, object.pos2.x);
+
+    if (h == 0 || entity.MoveVec.y == 0) return VecMove.x > 0 ? Left : Right;
+    if (d == 0 || entity.MoveVec.x == 0) return VecMove.y < 0 ? Top : Bottom;
+    if (h / entity.MoveVec.x > d / entity.MoveVec.y) return VecMove.y < 0 ? Top : Bottom;
+    if (h / entity.MoveVec.x <= d / entity.MoveVec.y) return VecMove.x > 0 ? Left : Right;
+
+    return (Type)404;
 }

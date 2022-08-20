@@ -1,6 +1,11 @@
 ﻿#pragma once
 #include "Source.h"
+#include <math.h>
+#include <cmath>
 
+bool Moving = false;
+Pos MovingStartPos;
+Pos MouseRelativeCoordinates;
 
 int WINAPI WinMain(HINSTANCE _hInstance,
     HINSTANCE _hPrevInstance,
@@ -39,6 +44,10 @@ int WINAPI WinMain(HINSTANCE _hInstance,
 
     return msg.wParam;
 }
+
+Pos GetMousePos(LPARAM lParam) {
+    return { float(LOWORD(lParam) / Size), float((WndHeight - HIWORD(lParam)) / Size) };
+};
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
     switch (uMsg)
@@ -69,6 +78,37 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
         }
         break;
     }
+    case WM_MOUSEMOVE:
+        if (Moving) Active->pos = GetMousePos(lParam) - MouseRelativeCoordinates;
+        break;
+    case WM_LBUTTONDOWN:
+    {
+        Object* object = nullptr;
+        if (FindObject(GetMousePos(lParam), &object)) {
+            if (object->color[0] != 0) {
+                if (Active != nullptr) Active->color[0] = 1;
+                object->color[0] = 0;
+                Active = object;
+            }
+            else
+            {
+                Moving = true;
+                MouseRelativeCoordinates = GetMousePos(lParam) - Active->pos;
+            }
+
+        }
+        else
+        {
+            Moving = false;
+        }
+        break;
+    }
+    case WM_LBUTTONUP:
+        if (Moving) {
+            Active->pos = GetMousePos(lParam) - MouseRelativeCoordinates;
+            Moving = false;
+        }
+        break;
     case WM_SIZE:
         WndResize(lParam);
         break;
@@ -121,17 +161,29 @@ void InitWindow() {
 }
 void Init() {
     glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
-    glOrtho(0, 30, 0, 30, 0, 1);
+    glOrtho(0, WndWight / Size, 0, WndHeight / Size, 0, 1);
 
-    obj.pos = { 20,0 };
+    obj.pos = { 4,8 };
     obj.pos2 = { 4,4 };
 
-    player.pos = { 10,1 };
-    player.pos2 = { 4,8 };
+    obj2.pos = { 12,8 };
+    obj2.pos2 = { 4,0.2 };
+
+    //obj3.pos = { 20,15 };
+    //obj3.pos2 = { 4,4 };
+    obj3.pos = { 40,20 };
+    obj3.pos2 = { 5,5 };
+
+    player.pos = { 30,15 };
+    player.pos2 = { 3.99,7.99 };
+    player.color[1] = 0;
 
 
     DrawList.push_back(&player);
     DrawList.push_back(&obj);
+    DrawList.push_back(&obj2);
+    DrawList.push_back(&obj3);
+    //DrawList.push_back(new Object(40,20,5,5));
 
 
     RedirectIOToConsole();
@@ -154,116 +206,38 @@ void FixedUpdate() {
     while (true)
     {
         if (duration_cast<microseconds>(system_clock::now().time_since_epoch()).count() - Now.count() >= 10000) {
+            Now = duration_cast<microseconds>(system_clock::now().time_since_epoch());
 
+
+            player.Move();
+            bool UpOrDown = false;
+            player.OnGround = false;
+            for (int i = 1; i < DrawList.size(); i++)
+            {
+                if (CheckColisions(player, *DrawList.at(i), player.MoveVec)) {
+                    cout << "BAN\n";
+                    UpOrDown = ResolveColisions(player, *DrawList.at(i), player.MoveVec);
+                }
+                if (CheckColisions(player, *DrawList.at(i), player.MoveVec, -n)) {
+                    cout << "Staing\n";
+                    player.OnGround = true;
+                }
+            }
+            
+            //cout << "BAN\n";
             CalculatePhisic(player);
-
-            Pos oldPos = player.pos;
+            if (UpOrDown) {
+                player.MoveVec.y = 0;
+            }
 
             //player.Move();
-            
-            bool fixed = false;
 
-            if (CheckColisions(player, obj, player.MoveVec, 0)) {
-
-                for (int j = 0; j < 4 && !fixed; j++)
-                {
-                    Pos MovePos1, MovePos2;
-                    switch (j)
-                    {
-                    case 0: // Right Down (1;0)
-                        MovePos1 = { player.pos.x + player.pos2.x, player.pos.y };
-                        MovePos2 = { player.pos.x + player.pos2.x + player.MoveVec.x, player.pos.y + player.MoveVec.y };
-                        break;
-                    case 1: // Left Down (0;0)
-                        MovePos1 = { player.pos.x,player.pos.y };
-                        MovePos2 = { player.pos.x + player.MoveVec.x,player.pos.y + player.MoveVec.y };
-                        break;
-                    case 2: // Left Up (0;1)
-                        MovePos1 = { player.pos.x,player.pos.y + player.pos2.y};
-                        MovePos2 = { player.pos.x + player.MoveVec.x,player.pos.y + player.pos2.y + player.MoveVec.y };
-                        break;
-                    case 3: // Right Up (1;1)
-                        MovePos1 = { player.pos.x + player.pos2.x,player.pos.y + player.pos2.y };
-                        MovePos2 = { player.pos.x + player.pos2.x + player.MoveVec.x, player.pos.y + player.pos2.y + player.MoveVec.y };
-                        break;
-                    }
-                    for (int i = 0; i < 4 && !fixed; i++)
-                    {
-                        Pos BoxLinePos1, BoxLinePos2;
-                        switch (i)
-                        {
-                        case 0: //Left Side
-                            BoxLinePos1 = { obj.pos.x,obj.pos.y };
-                            BoxLinePos2 = { obj.pos.x,obj.pos.y + obj.pos2.y };
-                            break;
-                        case 1: // Top Side
-                            BoxLinePos1 = { obj.pos.x,obj.pos.y + obj.pos2.y };
-                            BoxLinePos2 = { obj.pos.x + obj.pos2.x,obj.pos.y + obj.pos2.y };
-                            break;
-                        case 2: // Right Side
-                            BoxLinePos1 = { obj.pos.x + obj.pos2.x,obj.pos.y + obj.pos2.y };
-                            BoxLinePos2 = { obj.pos.x + obj.pos2.x,obj.pos.y };
-                            break;
-                        case 3: // Down Side
-                            BoxLinePos1 = { obj.pos.x + obj.pos2.x,obj.pos.y };
-                            BoxLinePos2 = { obj.pos.x,obj.pos.y };
-                            break;
-                        }
-                        if (LineSegmentsIntersection(MovePos1, MovePos2, BoxLinePos1, BoxLinePos2)) {
-                            if (i == 3) {
-                                 cout << "BAN\n";
-                            }
-                            cout << "BEST TEST: " << i << endl;
-                            cout << "X = " << Intersect(MovePos1, MovePos2, BoxLinePos1, BoxLinePos2).x << " Y = " << Intersect(MovePos1, MovePos2, BoxLinePos1, BoxLinePos2).y << endl;
-                            Pos tPos = Intersect(MovePos1, MovePos2, BoxLinePos1, BoxLinePos2);
-                            switch (j)
-                            {
-                            case 0:
-                                tPos = { tPos.x - player.pos2.x,  tPos.y };
-                                break;
-                            case 1:
-                                break;
-                            case 2:
-                                tPos = { tPos.x,  tPos.y - player.pos2.y };
-                                break;
-                            case3:
-                                tPos = { tPos.x - player.pos2.x,  tPos.y - player.pos2.y };
-                                break;
-                            }
-                            switch (i)
-                            {
-                            case 0:
-                            case 2:
-                                player.MoveVec.x = 0;
-                                break;
-                            case 1:
-                            case 3:
-                                player.MoveVec.y = 0;
-                                break;        
-                            }
-                            player.pos = tPos;
-                            fixed = true;
-                            break;
-                        }
-                    }
-                }
-                player.OnGround = true;
-            }
-            else if (!CheckColisions(player, obj, player.MoveVec, 0))
-            {
-                cout << "BAN2\n";
-                player.OnGround = false;
-            }
-            player.Move();
-
-
-            Now = duration_cast<microseconds>(system_clock::now().time_since_epoch());
-        };
+        }
     }
 }
 void Draw(Object& object) {
     glPushMatrix();
-    glColor3f(1.0f, 1.0f, 1.0f);
+    glColor3f(object.color[0], object.color[1], object.color[2]);
 
     glTranslatef(object.pos.x, object.pos.y, 0);
 
@@ -279,20 +253,41 @@ void Draw(Object& object) {
     glPopMatrix();
 }
 void CalculatePhisic(Entity& entity) {
-    if (entity.pos.y > 0 && !entity.OnGround) {
+    entity.pos = entity.pos + entity.MoveVec;
+    if (entity.pos.y < 0) {
+        entity.pos.y = 0;
+        entity.MoveVec.y = 0;
+    }
+    if (entity.pos.y > 0 && !player.OnGround && !Moving) {
         entity.MoveVec.y = entity.MoveVec.y - g;
     }
 }
 bool CheckColisions(Object& object, Object& object2, Pos MoveVec, float n) {
     Pos nextPos = object.pos + MoveVec;
-    float xA[2] = { nextPos.x + n,nextPos.x + object.pos2.x - n};
+    float xA[2] = { nextPos.x,nextPos.x + object.pos2.x};
     float xB[2] = { object2.pos.x ,object2.pos.x + object2.pos2.x };
 
-    float yA[2] = { nextPos.y + n,nextPos.y + object.pos2.y - n};
+    float yA[2] = { nextPos.y + n,nextPos.y + object.pos2.y};
     float yB[2] = { object2.pos.y ,object2.pos.y + object2.pos2.y };
 
     if (xA[1] < xB[0] || yA[1] < yB[0] || yA[0] > yB[1] || xA[0] > xB[1]) return false;
     return true;
+}
+bool CheckColisions(Pos pos, Object &object) {
+    float xB[2] = { object.pos.x ,object.pos.x + object.pos2.x };
+    float yB[2] = { object.pos.y ,object.pos.y + object.pos2.y };
+
+    if (pos.x < xB[0] || pos.y < yB[0] || pos.y > yB[1] || pos.x > xB[1]) return false;
+    return true;
+}
+bool FindObject(Pos pos, Object** findedObject) {
+    for(auto i : DrawList) {
+        if (CheckColisions(pos, *i)) {
+            *findedObject = i;
+            return true;
+        }
+    }
+    return false;
 }
 
 void EnableOpenGL(HWND hwnd, HDC* hDC, HGLRC* hRC)

@@ -1,7 +1,9 @@
 #pragma once
 
+#include <iostream>
+
 enum Type {
-    Good, Top, Left, Right, Bottom
+    Top = 1, Left = 0, Right = 2, Bottom = 3, Error = 404
 };
 
 struct Pos {
@@ -22,9 +24,19 @@ class Object {
 public:
     Pos pos;
     Pos pos2;
+    float color[3] = { 1,1,1 };
+    Object(float x1, float y1, float x2, float y2) {
+        pos = { x1,y1 };
+        pos2 = { x2,y2 };
+    }
+    Object() {
+        pos = { 0,0 };
+        pos2 = { 0,0 };
+    }
 };
 class Entity : public Object{
 public:
+    float restitution;
     bool OnGround = true;
     Pos MoveVec;
     void Move() {
@@ -43,25 +55,21 @@ public:
     int JumpCnt;
     bool JumpPressed = false;
     void Move() {
-        pos = pos + MoveVec;
-        if (pos.y < 0) {
-            pos.y = 0;
-            MoveVec.y = 0;
-        }
-
         this->MoveVec.x = 0;
         if ((GetKeyState(65) & 0x8000) != 0) this->MoveVec.x -= 0.5;
         if ((GetKeyState(68) & 0x8000) != 0) this->MoveVec.x += 0.5;
         if ((GetKeyState(32) & 0x8000) != 0) {
-            if (OnGround || pos.y == 0)
+            if (pos.y == 0 || OnGround)
             {
                 this->Jump();
-                JumpCnt = 1;
-                JumpPressed = true;
-            }
-            else if (JumpCnt == 1 && MoveVec.y <= 0 && !JumpPressed) {
-                this->Jump();
                 JumpCnt = 0;
+                JumpPressed = true;
+                std::cout << "First Jump\n";
+            }
+            else if (JumpCnt != 1 && !JumpPressed) {
+                this->Jump();
+                JumpCnt = 1;
+                std::cout << "Second Jump\n";
             }
         }
         else
