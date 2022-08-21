@@ -4,6 +4,13 @@
 #include <iostream>
 #include "Varibles.h"
 
+#define STB_IMAGE_IMPLEMENTATION
+#include "include/stb_image.h"
+
+using namespace std;
+namespace fs = std::filesystem;
+
+
 void EnableOpenGL(HWND hwnd, HDC* hDC, HGLRC* hRC)
 {
     PIXELFORMATDESCRIPTOR pfd;
@@ -56,6 +63,11 @@ void WndResize(LPARAM lParam) {
     WndWight = LOWORD(lParam);
     glViewport(0, 0, LOWORD(lParam), HIWORD(lParam));
     glOrtho(0, LOWORD(lParam) / Size, 0, HIWORD(lParam) / Size, 0, 1);
+}
+void WndResize() {
+    glLoadIdentity();
+    glViewport(0, 0, WndWight, WndHeight);
+    glOrtho(0, WndWight / Size, 0, WndHeight / Size, 0, 1);
 }
 Pos GetMousePos(LPARAM lParam) {
     return { float(LOWORD(lParam) / Size), float((WndHeight - HIWORD(lParam)) / Size) };
@@ -200,13 +212,72 @@ void CalculatePhisic(Entity& entity) {
 }
 
 //Work with OpenGl
+void SetCharSize(unsigned char* data, int widht, int cnt, float* cWidthArray, int checkByte) {
+    int pixPerChar = widht / 16;
+    for (int k = 0; k < 256; k++)
+    {
+        int x = (k % 16) * pixPerChar;
+        int y = (k / 16) * pixPerChar;
+        int i;
+        int ind;
+        unsigned char alpha;
+        for (i = x + pixPerChar - 1; i > x; i--)
+        {
+            for (int j = y + pixPerChar - 1; j > y; j--)
+            {
+                alpha = data[(j * widht + i) * cnt + checkByte];
+                if (alpha > 0) break;
+            }
+            if (alpha > 0) break;
+        }
+        i += pixPerChar / 10.0;
+        if (i > x + pixPerChar - 1) i = x + pixPerChar - 1;
+        if (k == 32) i = (x + pixPerChar / 2.0);
+        cWidthArray[k] = (i - x) / (float)pixPerChar;
+    }
+}
+void LoadTexture(string filename, unsigned int* target) {
+    int width, height, cnt;
+    unsigned char* data = stbi_load(filename.c_str(), &width, &height, &cnt, 0);
+
+    if (filename == "textures/text/Verdana_B_alpha.png") SetCharSize(data, width, cnt, charWidthArray, 3);
+
+    cout << "Loaded texture: " << filename.c_str() << endl;
+    glGenTextures(1, target);
+    glBindTexture(GL_TEXTURE_2D, *target);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, cnt == 4 ? GL_RGBA : GL_RGB, GL_UNSIGNED_BYTE, data);
+    glBindTexture(GL_TEXTURE_2D, 0);
+    stbi_image_free(data);
+}
+void TexturesInit() {
+    int i = 0;
+    std::string path = "textures/tex";
+    for (const auto& entry : fs::directory_iterator(path)) {
+        LoadTexture((string)"textures/tex/" + entry.path().filename().string().c_str(), &textures[i]);
+        i++;
+    }
+    LoadTexture("textures/text/Verdana_B_alpha.png", &TextTex);
+}
+
 void Draw(Object& object) {
+    /*glEnable(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, textures[0]);
+
     glPushMatrix();
     glColor3f(object.color[0], object.color[1], object.color[2]);
 
     glTranslatef(object.pos.x, object.pos.y, 0);
 
     glBegin(GL_TRIANGLE_FAN);
+    glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+
+    float texCord2[] = { 0,0,0,object.pos2.y ,object.pos2.x, object.pos2.y ,object.pos2.x, 0 };
+
+    glTexCoordPointer(2, GL_FLOAT, 0, texCord2);
 
     glVertex2f(0, 0);
     glVertex2f(0, object.pos2.y);
@@ -214,6 +285,83 @@ void Draw(Object& object) {
     glVertex2f(object.pos2.x, 0);
 
     glEnd();
+    glDisableClientState(GL_TEXTURE_COORD_ARRAY);
 
+    glPopMatrix();
+
+    glDisable(GL_TEXTURE_2D);*/
+
+    glEnable(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, textures[0]);
+
+    glColor3f(object.color[0], object.color[1], object.color[2]);
+    glPushMatrix();
+
+    glTranslatef(object.pos.x, object.pos.y, 0);
+
+    glEnableClientState(GL_VERTEX_ARRAY);
+    glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+
+    float vertex2[] = { 0,0,0,0,object.pos2.y,0 ,object.pos2.x, object.pos2.y,0 ,object.pos2.x, 0,0 };
+    glVertexPointer(3, GL_FLOAT, 0, vertex2);
+    glTexCoordPointer(2, GL_FLOAT, 0, texCord2);
+    glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+
+    glDisableClientState(GL_VERTEX_ARRAY);
+    glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+
+    glDisable(GL_TEXTURE_2D);
+
+    glPopMatrix();
+}
+void Drawv2() {
+    glEnable(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, textures[0]);
+
+    glColor3f(1, 1, 1);
+    glPushMatrix();
+
+    glEnableClientState(GL_VERTEX_ARRAY);
+    glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+
+    glVertexPointer(3, GL_FLOAT, 0, vertex);
+    glTexCoordPointer(2, GL_FLOAT, 0, texCord);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+
+    glDisableClientState(GL_VERTEX_ARRAY);
+    glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+
+    glDisable(GL_TEXTURE_2D);
+
+    glPopMatrix();
+}
+
+void DrawText(string str, float x,float y, float Scale) {
+    glEnable(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, TextTex);
+    glColor3f(1, 0.2, 0.2);
+    glPushMatrix();
+    glTranslatef(x, WndHeight / (float)Size - Scale - y, 0);
+    glScalef(Scale, Scale, 1);
+    glEnableClientState(GL_VERTEX_ARRAY);
+    glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+
+    float charsize = 1 / 16.0;
+    Pos charPos;
+
+    glVertexPointer(3, GL_FLOAT, 0, vertex);
+    for (int i : str)
+    {
+        charPos = Pos{ float(i % 16), float(i / 16) };
+        float textTexCord[] = { charsize * charPos.x + charsize,charsize * charPos.y, charsize * charPos.x,charsize * charPos.y, charsize * charPos.x + charsize,charsize * charPos.y + charsize, charsize * charPos.x,charsize * charPos.y + charsize };
+        glTexCoordPointer(2, GL_FLOAT, 0, textTexCord);
+        glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+        glTranslatef(charWidthArray[i], 0, 0);
+    }
+
+    glDisableClientState(GL_VERTEX_ARRAY);
+    glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+    glDisable(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, 0);
     glPopMatrix();
 }

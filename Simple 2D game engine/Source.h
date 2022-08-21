@@ -15,13 +15,15 @@ BOOL bQuit = FALSE;
 
 
 microseconds Now;
-Player player;
+Player* player;
 Object obj;
 Object obj2;
 Object obj3;
 Object* Active;
 
 Pos MouseRelativeCoordinates;
+
+EditActionType EditType = None;
 
 
 

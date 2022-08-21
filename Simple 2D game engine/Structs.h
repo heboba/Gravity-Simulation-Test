@@ -5,6 +5,12 @@
 enum Type {
     Top = 1, Left = 0, Right = 2, Bottom = 3, Error = 404
 };
+enum ObjectType {
+    tPlayer, tObject
+};
+enum EditActionType {
+    None, ChangeX, ChangeY, ScaleMode
+};
 
 struct Pos {
     float x, y;
@@ -24,14 +30,17 @@ class Object {
 public:
     Pos pos;
     Pos pos2;
+    ObjectType type;
     float color[3] = { 1,1,1 };
     Object(float x1, float y1, float x2, float y2) {
         pos = { x1,y1 };
         pos2 = { x2,y2 };
+        type = tObject;
     }
     Object() {
         pos = { 0,0 };
         pos2 = { 0,0 };
+        type = tObject;
     }
 };
 class Entity : public Object{
@@ -54,6 +63,9 @@ class Player : public Entity {
 public:
     int JumpCnt;
     bool JumpPressed = false;
+    Player() {
+        type = tPlayer;
+    }
     void Move() {
         this->MoveVec.x = 0;
         if ((GetKeyState(65) & 0x8000) != 0) this->MoveVec.x -= 0.5;

@@ -27,10 +27,26 @@
     <Filter Include="Исходные файлы">
       <UniqueIdentifier>{6c92cd6f-5959-4905-9fc4-fd11796ec57d}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Файлы">
+      <UniqueIdentifier>{ecc1c514-ee03-4ed6-8abb-346e03d6403f}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source.cpp">
       <Filter>Исходные файлы</Filter>
     </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Autosave.json">
+      <Filter>Файлы</Filter>
+    </None>
+    <None Include="Save.json">
+      <Filter>Файлы</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="Bugs to fix.txt">
+      <Filter>Файлы</Filter>
+    </Text>
   </ItemGroup>
 </Project>

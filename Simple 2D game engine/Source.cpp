@@ -1,10 +1,11 @@
 ﻿#pragma once
 #include "Source.h"
+#include "nlohmann/json.hpp"
+#include <fstream>
 
-int WINAPI WinMain(HINSTANCE _hInstance,
-    HINSTANCE _hPrevInstance,
-    LPSTR _lpCmdLine,
-    int _nCmdShow)
+bool CtrlPressed = false;
+
+int WINAPI WinMain(HINSTANCE _hInstance,HINSTANCE _hPrevInstance, LPSTR _lpCmdLine, int _nCmdShow)
 {
     hInstance = _hInstance;
     hPrevInstance = _hPrevInstance;
@@ -99,7 +100,46 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
             PostQuitMessage(0);
             break;
         case VK_UP:
-            DrawList.push_back(new Object(5, 5, 4, 4));
+            if (EditMode) DrawList.push_back(new Object(5, 5, 4, 4));
+            break;
+        case 88: // x
+            if (EditMode) EditType = ChangeX;
+            break;
+        case 89: //y
+            if (EditMode) EditType = ChangeY;
+            break;
+        case 67: //c
+            SaveGame("Save.json");
+            break;
+        case 86: //v
+            DrawList.clear();
+            LoadGame("Save.json");
+            break;
+        case 90: //z
+            if (EditMode) {
+                if (EditType != ScaleMode) {
+                    EditType = ScaleMode;
+                }
+                else
+                {
+                    EditType = None;
+                }
+            }
+            break;
+        case 69: //e
+            if (CtrlPressed) {
+                if (!EditMode) {
+                    EditMode = true;
+                }
+                else
+                {
+                    EditMode = false;
+                    if (Active != nullptr) Active->color[0] = 1;
+                }
+            }
+            break;
+        case 17: // ctrl
+            CtrlPressed = true;
             break;
         }
         break;
@@ -109,36 +149,61 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
         cout << "wParam2 = " << wParam << endl;
         switch (wParam)
         {
+        case 17:
+            CtrlPressed = false;
+            break;
         }
         break;
     }
     case WM_MOUSEMOVE:
-        if (Moving) Active->pos = GetMousePos(lParam) - MouseRelativeCoordinates;
+        if (Moving && EditMode) Active->pos = GetMousePos(lParam) - MouseRelativeCoordinates;
         break;
     case WM_LBUTTONDOWN:
     {
-        Object* object = nullptr;
-        if (FindObject(GetMousePos(lParam), &object)) {
-            if (object->color[0] != 0) {
-                if (Active != nullptr) Active->color[0] = 1;
-                object->color[0] = 0;
-                Active = object;
+        if (EditMode) {
+            Object* object = nullptr;
+            if (FindObject(GetMousePos(lParam), &object)) {
+                if (object->color[1] != 0.5) {
+                    if (Active != nullptr) {
+                        Active->color[1] = 1;
+                        Active->color[2] = 1;
+                    }
+                    object->color[1] = 0.5;
+                    object->color[2] = 0.5;
+                    Active = object;
+                }
+                else
+                {
+                    Moving = true;
+                    MouseRelativeCoordinates = GetMousePos(lParam) - Active->pos;
+                }
+
             }
             else
             {
-                Moving = true;
-                MouseRelativeCoordinates = GetMousePos(lParam) - Active->pos;
+                Moving = false;
             }
-
-        }
-        else
-        {
-            Moving = false;
         }
         break;
     }
+    case WM_MOUSEWHEEL:
+        cout << "WM_MOUSEWHEEL\n";
+        if (EditMode) {
+            cout << "wParam = " << short(HIWORD(wParam)) << endl;
+            if (Active != nullptr) {
+                if (EditType == ChangeX) Active->pos2.x += 0.25 * (short(HIWORD(wParam)) / 120);
+                if (EditType == ChangeY) Active->pos2.y += 0.25 * (short(HIWORD(wParam)) / 120);
+                if (Active->pos2.x <= 0) Active->pos2.x = 0.25;
+                if (Active->pos2.y <= 0) Active->pos2.y = 0.25;
+            }
+            if (EditType == ScaleMode) {
+                Size += 0.25 * (short(HIWORD(wParam)) / 120);
+                WndResize();
+            }
+        }
+        break;
     case WM_LBUTTONUP:
-        if (Moving) {
+        if (Moving && EditMode && Active != nullptr) {
             Active->pos = GetMousePos(lParam) - MouseRelativeCoordinates;
             Moving = false;
         }
@@ -154,81 +219,152 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
     return 0;
 }
 
+void FixedUpdate() {
+    Now = duration_cast<microseconds>(system_clock::now().time_since_epoch());
+    while (true)
+    {
+        if (duration_cast<microseconds>(system_clock::now().time_since_epoch()).count() - Now.count() >= 100000) {
+            Now = duration_cast<microseconds>(system_clock::now().time_since_epoch());
+            Update();
+        }
+    }
+}
+void SaveGame(std::string name) {
+    nlohmann::json j;
+    for (int i = 0; i < DrawList.size(); i++)
+    {
+        j[i]["Color"][0] = DrawList.at(i)->color[0];
+        j[i]["Color"][1] = DrawList.at(i)->color[1];
+        j[i]["Color"][2] = DrawList.at(i)->color[2];
+        j[i]["Type"] = DrawList.at(i)->type;
+        j[i]["pos"][0] = DrawList.at(i)->pos.x;
+        j[i]["pos"][1] = DrawList.at(i)->pos.y;
+        j[i]["pos2"][0] = DrawList.at(i)->pos2.x;
+        j[i]["pos2"][1] = DrawList.at(i)->pos2.y;
+    }
+    std::ofstream o(name);
+    o << std::setw(2) << j << std::endl;
+}
+void LoadGame(std::string name) {
+    std::ifstream i(name);
+    nlohmann::json j;
+    i >> j;
 
+
+    for (auto i : j)
+    {
+        ObjectType type = (ObjectType)i["Type"].get<int>();
+        switch (type)
+        {
+        case tPlayer:
+        {
+            Player* obj = new Player();
+            obj->pos.x = i["pos"][0].get<float>();
+            obj->pos.y = i["pos"][1].get<float>();
+            obj->pos2.x = i["pos2"][0].get<float>();
+            obj->pos2.y = i["pos2"][1].get<float>();
+            //obj->color[0] = i["Color"][0].get<float>();
+            //obj->color[1] = i["Color"][1].get<float>();
+            //obj->color[2] = i["Color"][2].get<float>();
+            DrawList.push_back(obj);
+            player = obj;
+            break;
+        }
+        case tObject:
+        {
+            Object* obj = new Object();
+            obj->pos.x = i["pos"][0].get<float>();
+            obj->pos.y = i["pos"][1].get<float>();
+            obj->pos2.x = i["pos2"][0].get<float>();
+            obj->pos2.y = i["pos2"][1].get<float>();
+            DrawList.push_back(obj);
+            break;
+        }
+        default:
+            cout << "Error!!!\n";
+            Object* obj = new Object();
+            break;
+        }
+    }
+}
 void Init() {
     glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
     glOrtho(0, WndWight / Size, 0, WndHeight / Size, 0, 1);
+
+    RedirectIOToConsole();
+
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+    TexturesInit();
 
     obj.pos = { 4,8 };
     obj.pos2 = { 4,4 };
 
     obj2.pos = { 12,8 };
-    obj2.pos2 = { 4,0.2 };
+    obj2.pos2 = { 4,3 };
 
-    //obj3.pos = { 20,15 };
-    //obj3.pos2 = { 4,4 };
     obj3.pos = { 40,20 };
     obj3.pos2 = { 5,5 };
 
-    player.pos = { 30,15 };
-    player.pos2 = { 3.99,7.99 };
-    player.color[1] = 0;
+    player = new Player();
+
+    player->pos = { 30,15 };
+    player->pos2 = { 3.99,7.99 };
+    player->color[1] = 0;
 
 
-    DrawList.push_back(&player);
+    DrawList.push_back(player);
     DrawList.push_back(&obj);
     DrawList.push_back(&obj2);
     DrawList.push_back(&obj3);
+
+    SaveGame("Autosave.json");
+    DrawList.clear();
+    LoadGame("Autosave.json");
+    
+
+
     //DrawList.push_back(new Object(40,20,5,5));
 
-
-    RedirectIOToConsole();
     HANDLE hThr = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)FixedUpdate, 0, 0, NULL);
 }
+
 void MainLoop() {
     glClear(GL_COLOR_BUFFER_BIT);
 
-    for (int i = 0; i < DrawList.size(); i++)
+    for (int i = DrawList.size() - 1; i >= 0; i--)
     {
+        if (EditMode) DrawText("Edit mode active!", 0, 0, 2);
+        if (EditMode) DrawText("Edit mode active!", 0, 2, 1.5);
+        //Drawv2();
         Draw(*DrawList[i]);
     }
 
     SwapBuffers(hDC);
     Sleep(1);
 }
-void FixedUpdate() {
-    Now = duration_cast<microseconds>(system_clock::now().time_since_epoch());
-    int error = 0;
-    while (true)
+void Update() {
+
+    player->Move();
+    bool UpOrDown = false;
+    player->OnGround = false;
+    for (int i = 1; i < DrawList.size(); i++)
     {
-        if (duration_cast<microseconds>(system_clock::now().time_since_epoch()).count() - Now.count() >= 10000) {
-            Now = duration_cast<microseconds>(system_clock::now().time_since_epoch());
-
-
-            player.Move();
-            bool UpOrDown = false;
-            player.OnGround = false;
-            for (int i = 1; i < DrawList.size(); i++)
-            {
-                if (CheckColisions(player, *DrawList.at(i), player.MoveVec)) {
-                    cout << "BAN\n";
-                    UpOrDown = ResolveColisions(player, *DrawList.at(i), player.MoveVec);
-                }
-                if (CheckColisions(player, *DrawList.at(i), player.MoveVec, -n)) {
-                    cout << "Staing\n";
-                    player.OnGround = true;
-                }
-            }
-            
-            //cout << "BAN\n";
-            CalculatePhisic(player);
-            if (UpOrDown) {
-                player.MoveVec.y = 0;
-            }
-
-            //player.Move();
-
+        if (CheckColisions(*player, *DrawList.at(i), player->MoveVec)) {
+            UpOrDown = ResolveColisions(*player, *DrawList.at(i), player->MoveVec);
         }
+        //Check for staing on Object
+        if (CheckColisions(*player, *DrawList.at(i), player->MoveVec, -n)) {
+            player->OnGround = true;
+        }
+    }
+    //Finaly move player
+    CalculatePhisic(*player);
+
+    //BugFix
+    if (UpOrDown) {
+        player->MoveVec.y = 0;
     }
 }
 bool FindObject(Pos pos, Object** findedObject) {
