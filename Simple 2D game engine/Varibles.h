@@ -10,7 +10,7 @@ int WndWight;
 
 //Gravity and micro error
 float g = 0.1;
-float n = 0.00001;
+float n = 0.02;
 
 //Pixels per block
 float Size = 20;

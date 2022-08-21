@@ -351,11 +351,11 @@ void Update() {
     player->OnGround = false;
     for (int i = 1; i < DrawList.size(); i++)
     {
-        if (CheckColisions(*player, *DrawList.at(i), player->MoveVec)) {
+        if (CheckColisions(*player, *DrawList.at(i), player->MoveVec) || CheckColisions(*player, *DrawList.at(i))) {
             UpOrDown = ResolveColisions(*player, *DrawList.at(i), player->MoveVec);
         }
         //Check for staing on Object
-        if (CheckColisions(*player, *DrawList.at(i), player->MoveVec, -n)) {
+        if (CheckColisions(*player, *DrawList.at(i), player->MoveVec, -n) || CheckColisions(*player, *DrawList.at(i), {0,0}, -n)) {
             player->OnGround = true;
         }
     }

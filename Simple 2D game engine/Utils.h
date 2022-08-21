@@ -141,28 +141,28 @@ bool ResolveColisions(Entity& entity, Object& object, Pos VecMove) {
         h = GetDist(entity.pos.y, entity.pos2.y, object.pos.y, object.pos2.y);
         h2 = entity.pos.y + entity.pos2.y - (entity.pos.y + entity.pos2.y + entity.MoveVec.y);
 
-        kof = (1 - h / h2) + 0.0001;
+        kof = (1 - h / h2) + 0.01;
         entity.MoveVec = { entity.MoveVec.x - entity.MoveVec.x * kof,entity.MoveVec.y - entity.MoveVec.y * kof };
         return true;
     case Bottom:
         h = GetDist(entity.pos.y, entity.pos2.y, object.pos.y, object.pos2.y);
         h2 = entity.pos.y + entity.pos2.y + entity.MoveVec.y - (entity.pos.y + entity.pos2.y);
 
-        kof = (1 - h / h2) + 0.0001;
+        kof = (1 - h / h2) + 0.01;
         entity.MoveVec = { entity.MoveVec.x - entity.MoveVec.x * kof,entity.MoveVec.y - entity.MoveVec.y * kof };
         return true;
     case Left:
         d = GetDist(entity.pos.x, entity.pos2.x, object.pos.x, object.pos2.x);
         d2 = entity.pos.x + entity.pos2.x + entity.MoveVec.x - (entity.pos.x + entity.pos2.x);
 
-        kof = (1 - d / d2) + 0.0001;
+        kof = (1 - d / d2) + 0.01;
         entity.MoveVec = { entity.MoveVec.x - entity.MoveVec.x * kof,entity.MoveVec.y};
         return false;
     case Right:
         d = GetDist(entity.pos.x, entity.pos2.x, object.pos.x, object.pos2.x);
         d2 = entity.pos.x + entity.pos2.x - (entity.pos.x + entity.pos2.x + entity.MoveVec.x);
 
-        kof = (1 - d / d2) + 0.0001;
+        kof = (1 - d / d2) + 0.01;
         entity.MoveVec = { entity.MoveVec.x - entity.MoveVec.x * kof,entity.MoveVec.y };
         return false;
     }
@@ -189,6 +189,7 @@ bool CheckColisions(Object& object, Object& object2, Pos MoveVec, float n) {
     float yB[2] = { object2.pos.y ,object2.pos.y + object2.pos2.y };
 
     if (xA[1] < xB[0] || yA[1] < yB[0] || yA[0] > yB[1] || xA[0] > xB[1]) return false;
+    cout << "Colisions error. Move vec =" << MoveVec.x << " " << MoveVec.y << ". Object pos = " << object2.pos.x << " " << object2.pos.y << endl;
     return true;
 }
 bool CheckColisions(Pos pos, Object& object) {
