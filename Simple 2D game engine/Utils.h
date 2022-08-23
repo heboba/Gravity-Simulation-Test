@@ -120,7 +120,7 @@ float GetDist(float cord1, float cord2, float cord3, float cord4)
 bool ResolveColisions(Entity& entity, Object& object, Pos VecMove) {
 
     if (CheckColisions(entity, object)) {
-        while (CheckColisions(entity,object))
+        while (CheckColisions(entity,object, {0,0}))
         {
             entity.pos.y += 1;
         }
@@ -138,7 +138,7 @@ bool ResolveColisions(Entity& entity, Object& object, Pos VecMove) {
         h = GetDist(entity.pos.y, entity.pos2.y, object.pos.y, object.pos2.y);
         h2 = entity.pos.y + entity.pos2.y - (entity.pos.y + entity.pos2.y + entity.MoveVec.y);
 
-        kof = (1 - h / h2) + 0.01;
+        kof = (1 - h / h2);
         entity.MoveVec = { entity.MoveVec.x - entity.MoveVec.x * kof,entity.MoveVec.y - entity.MoveVec.y * kof };
         return true;
     case Bottom:

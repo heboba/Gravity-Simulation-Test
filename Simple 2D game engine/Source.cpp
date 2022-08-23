@@ -356,23 +356,28 @@ void Update() {
     player->OnGround = false;
     for (int i = 1; i < DrawList.size(); i++)
     {
-        if (CheckColisions(*player, *DrawList.at(i), player->MoveVec) || CheckColisions(*player, *DrawList.at(i))) {
+        if (CheckColisions(*player, *DrawList.at(i), player->MoveVec, n) || CheckColisions(*player, *DrawList.at(i), {0,0}, n)) {
+            cout << "Check Col\n";
             UpOrDown = ResolveColisions(*player, *DrawList.at(i), player->MoveVec);
         }
         //Check for staing on Object
         if (CheckColisions(*player, *DrawList.at(i), player->MoveVec, -n) || CheckColisions(*player, *DrawList.at(i), {0,0}, -n)) {
+            cout << "Check Ground\n";
             player->OnGround = true;
+            UpOrDown = true;
         }
     }
     //Finaly move player
     CalculatePhisic(*player);
 
-    cout << "Y = " << player->pos.y << endl;
+    cout << "Y = " << player->pos.y << ". Yvec = " << player->MoveVec.y << endl;
 
     //BugFix
     if (UpOrDown) {
         player->MoveVec.y = 0;
     }
+
+    cout << "next Y = " << player->pos.y << ". Yvec = " << player->MoveVec.y << endl;
 
     if (!EditMode) {
         float temp = (player->pos.x + player->pos2.x / 2) - (WndWight / Size) / 2 + Camera.x;
