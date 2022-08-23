@@ -100,7 +100,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
             PostQuitMessage(0);
             break;
         case VK_UP:
-            if (EditMode) DrawList.push_back(new Object(5, 5, 4, 4));
+            if (EditMode) DrawList.push_back(new Object(5 - Camera.x, 5 - Camera.y, 4, 4));
             break;
         case 88: // x
             if (EditMode) EditType = ChangeX;
@@ -114,6 +114,9 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
         case 86: //v
             DrawList.clear();
             LoadGame("Save.json");
+            break;
+        case 70:
+            if (EditMode) EditType = ChangeUfps;
             break;
         case 90: //z
             if (EditMode) {
@@ -162,7 +165,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
     {
         if (EditMode) {
             Object* object = nullptr;
-            if (FindObject(GetMousePos(lParam), &object)) {
+            if (FindObject(GetMousePos(lParam) - Camera, &object)) {
                 if (object->color[1] != 0.5) {
                     if (Active != nullptr) {
                         Active->color[1] = 1;
@@ -200,6 +203,9 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
                 Size += 0.25 * (short(HIWORD(wParam)) / 120);
                 WndResize();
             }
+            if (EditType == ChangeUfps) {
+                ufps -= 500 * (short(HIWORD(wParam)) / 120);
+            }
         }
         break;
     case WM_LBUTTONUP:
@@ -223,7 +229,7 @@ void FixedUpdate() {
     Now = duration_cast<microseconds>(system_clock::now().time_since_epoch());
     while (true)
     {
-        if (duration_cast<microseconds>(system_clock::now().time_since_epoch()).count() - Now.count() >= 100000) {
+        if (duration_cast<microseconds>(system_clock::now().time_since_epoch()).count() - Now.count() >= ufps) {
             Now = duration_cast<microseconds>(system_clock::now().time_since_epoch());
             Update();
         }
@@ -338,9 +344,8 @@ void MainLoop() {
         if (EditMode) DrawText("Edit mode active!", 0, 0, 2);
         if (EditMode) DrawText("Edit mode active!", 0, 2, 1.5);
         //Drawv2();
-        Draw(*DrawList[i]);
+        Draw(*DrawList[i], Camera);
     }
-
     SwapBuffers(hDC);
     Sleep(1);
 }
@@ -362,11 +367,38 @@ void Update() {
     //Finaly move player
     CalculatePhisic(*player);
 
+    cout << "Y = " << player->pos.y << endl;
+
     //BugFix
     if (UpOrDown) {
         player->MoveVec.y = 0;
     }
+
+    if (!EditMode) {
+        float temp = (player->pos.x + player->pos2.x / 2) - (WndWight / Size) / 2 + Camera.x;
+        if (abs(temp) > ((WndWight / Size) / 2) / 2) {
+            Camera.x -= temp / 80;
+        }
+
+        temp = (player->pos.y + player->pos2.y / 2) - (WndHeight / Size) / 2 + Camera.y;
+        if (abs(temp) > ((WndHeight / Size) / 2) / 2) {
+            Camera.y -= temp / 50;
+        }
+        //Camera = { -(player->pos.x + player->pos2.x / 2) + (WndWight / Size) / 2 };
+    }
+
+    //cout << "Camera pos = " << (player->pos.x + player->pos2.x / 2) - (WndWight / Size)/2 << endl;
 }
+
+void WndResize() {
+    glLoadIdentity();
+    glViewport(0, 0, WndWight, WndHeight);
+    //glOrtho(0, WndWight / Size, 0, WndHeight / Size, 0, 1);
+    //glViewport(player->pos.x * Size - WndWight / 2.0, 0, player->pos.x * Size + WndWight / 2.0, WndHeight);
+    glOrtho(0, WndWight / Size, 0, WndHeight / Size, 0, 1);
+    //glOrtho(player->pos.x - (WndWight / Size) / 2.0, player->pos.x + (WndWight / Size) / 2.0, 0, WndHeight / Size, 0, 1);
+}
+
 bool FindObject(Pos pos, Object** findedObject) {
     for (auto i : DrawList) {
         if (CheckColisions(pos, *i)) {

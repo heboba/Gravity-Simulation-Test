@@ -16,6 +16,7 @@ void CalculatePhisic(Entity& entity);
 bool CheckColisions(Object& object, Object& object2, Pos MoveVec = { 0,0 }, float n = 0);
 bool CheckColisions(Pos pos, Object& object);
 bool FindObject(Pos pos, Object** findedObject);
+void WndResize();
 void WndResize(LPARAM lParam);
 void FixedUpdate();
 void Update();

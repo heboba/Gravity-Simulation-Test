@@ -3,6 +3,7 @@
 #include <filesystem>
 #include <iostream>
 #include "Varibles.h"
+#include "Source.h"
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "include/stb_image.h"
@@ -63,11 +64,7 @@ void WndResize(LPARAM lParam) {
     WndWight = LOWORD(lParam);
     glViewport(0, 0, LOWORD(lParam), HIWORD(lParam));
     glOrtho(0, LOWORD(lParam) / Size, 0, HIWORD(lParam) / Size, 0, 1);
-}
-void WndResize() {
-    glLoadIdentity();
-    glViewport(0, 0, WndWight, WndHeight);
-    glOrtho(0, WndWight / Size, 0, WndHeight / Size, 0, 1);
+    //glOrtho((player->pos.x - (WndWight / Size) / 2), (player->pos.x + (WndWight / Size) / 2), 0, WndHeight / Size, 0, 1);
 }
 Pos GetMousePos(LPARAM lParam) {
     return { float(LOWORD(lParam) / Size), float((WndHeight - HIWORD(lParam)) / Size) };
@@ -264,7 +261,7 @@ void TexturesInit() {
     LoadTexture("textures/text/Verdana_B_alpha.png", &TextTex);
 }
 
-void Draw(Object& object) {
+void Draw(Object& object, Pos& Camera) {
     /*glEnable(GL_TEXTURE_2D);
     glBindTexture(GL_TEXTURE_2D, textures[0]);
 
@@ -298,7 +295,7 @@ void Draw(Object& object) {
     glColor3f(object.color[0], object.color[1], object.color[2]);
     glPushMatrix();
 
-    glTranslatef(object.pos.x, object.pos.y, 0);
+    glTranslatef(object.pos.x + Camera.x, object.pos.y + Camera.y, 0);
 
     glEnableClientState(GL_VERTEX_ARRAY);
     glEnableClientState(GL_TEXTURE_COORD_ARRAY);

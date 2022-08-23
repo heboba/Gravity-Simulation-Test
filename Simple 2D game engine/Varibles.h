@@ -3,6 +3,7 @@
 //For Edit Mode
 bool EditMode = true;
 bool Moving = false;
+int ufps = 10000;
 
 //WndSize
 int WndHeight;
@@ -10,7 +11,7 @@ int WndWight;
 
 //Gravity and micro error
 float g = 0.1;
-float n = 0.02;
+float n = 0.012;
 
 //Pixels per block
 float Size = 20;

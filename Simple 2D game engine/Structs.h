@@ -9,7 +9,7 @@ enum ObjectType {
     tPlayer, tObject
 };
 enum EditActionType {
-    None, ChangeX, ChangeY, ScaleMode
+    None, ChangeX, ChangeY, ScaleMode, ChangeUfps
 };
 
 struct Pos {
