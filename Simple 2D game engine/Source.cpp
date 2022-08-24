@@ -225,6 +225,24 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
     return 0;
 }
 
+bool CheckAllColisions(Object** object) {
+    for (int i = 1; i < DrawList.size(); i++) {
+        if (CheckColisions(*player, *DrawList.at(i), player->MoveVec, n) || CheckColisions(*player, *DrawList.at(i), { 0,0 }, n)) {
+            *object = DrawList.at(i);
+            return true;
+        }
+    }
+    return false;
+}
+bool FindObject(Pos pos, Object** findedObject) {
+    for (auto i : DrawList) {
+        if (CheckColisions(pos, *i)) {
+            *findedObject = i;
+            return true;
+        }
+    }
+    return false;
+}
 void FixedUpdate() {
     Now = duration_cast<microseconds>(system_clock::now().time_since_epoch());
     while (true)
@@ -351,52 +369,41 @@ void MainLoop() {
 }
 
 
-bool CheckAllColisions() {
-    for (int i = 1; i < DrawList.size(); i++) {
-        if (CheckColisions(*player, *DrawList.at(i), player->MoveVec, n) || CheckColisions(*player, *DrawList.at(i), { 0,0 }, n)) {
-            return true;
-        }
-    }
-    return false;
-}
-
-
 void Update() {
 
     player->Move();
+
+
     bool UpOrDown = false;
     player->OnGround = false;
-    while (CheckAllColisions()) {
-        for (int i = 1; i < DrawList.size(); i++)
-        {
-            if (CheckColisions(*player, *DrawList.at(i), player->MoveVec, n) || CheckColisions(*player, *DrawList.at(i), { 0,0 }, n)) {
-                cout << "Check Col\n";
-                UpOrDown = ResolveColisions(*player, *DrawList.at(i), player->MoveVec);
-            }
-            //Check for staing on Object
-        }
+    Object* col = nullptr;
+
+
+    while (CheckAllColisions(&col)) {
+        if (!CheckColisions(*player, *col, player->MoveVec, n) && !CheckColisions(*player, *col, { 0,0 }, n)) continue;
+
+        !UpOrDown ? UpOrDown = ResolveColisions(*player, *col, player->MoveVec) : ResolveColisions(*player, *col, player->MoveVec);
     }
+
+
     for (int i = 1; i < DrawList.size(); i++)
     {
         //Check for staing on Object
-        if (CheckColisions(*player, *DrawList.at(i), player->MoveVec, -n) || CheckColisions(*player, *DrawList.at(i), { 0,0 }, -n)) {
-            cout << "Check Ground\n";
-            player->OnGround = true;
-            UpOrDown = true;
-        }
+        if (!CheckColisions(*player, *DrawList.at(i), player->MoveVec, -n) && !CheckColisions(*player, *DrawList.at(i), { 0,0 }, -n)) continue;
+
+        player->OnGround = true;
     }
+
     //Finaly move player
     CalculatePhisic(*player);
-
-    cout << "Y = " << player->pos.y << ". Yvec = " << player->MoveVec.y << endl;
 
     //BugFix
     if (UpOrDown) {
         player->MoveVec.y = 0;
     }
 
-    cout << "next Y = " << player->pos.y << ". Yvec = " << player->MoveVec.y << endl;
 
+    //Simple camera
     if (!EditMode) {
         float temp = (player->pos.x + player->pos2.x / 2) - (WndWight / Size) / 2 + Camera.x;
         if (abs(temp) > ((WndWight / Size) / 2) / 2) {
@@ -407,27 +414,5 @@ void Update() {
         if (abs(temp) > ((WndHeight / Size) / 2) / 2) {
             Camera.y -= temp / 50;
         }
-        //Camera = { -(player->pos.x + player->pos2.x / 2) + (WndWight / Size) / 2 };
     }
-
-    //cout << "Camera pos = " << (player->pos.x + player->pos2.x / 2) - (WndWight / Size)/2 << endl;
-}
-
-void WndResize() {
-    glLoadIdentity();
-    glViewport(0, 0, WndWight, WndHeight);
-    //glOrtho(0, WndWight / Size, 0, WndHeight / Size, 0, 1);
-    //glViewport(player->pos.x * Size - WndWight / 2.0, 0, player->pos.x * Size + WndWight / 2.0, WndHeight);
-    glOrtho(0, WndWight / Size, 0, WndHeight / Size, 0, 1);
-    //glOrtho(player->pos.x - (WndWight / Size) / 2.0, player->pos.x + (WndWight / Size) / 2.0, 0, WndHeight / Size, 0, 1);
-}
-
-bool FindObject(Pos pos, Object** findedObject) {
-    for (auto i : DrawList) {
-        if (CheckColisions(pos, *i)) {
-            *findedObject = i;
-            return true;
-        }
-    }
-    return false;
 }

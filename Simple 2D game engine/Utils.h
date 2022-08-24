@@ -64,7 +64,11 @@ void WndResize(LPARAM lParam) {
     WndWight = LOWORD(lParam);
     glViewport(0, 0, LOWORD(lParam), HIWORD(lParam));
     glOrtho(0, LOWORD(lParam) / Size, 0, HIWORD(lParam) / Size, 0, 1);
-    //glOrtho((player->pos.x - (WndWight / Size) / 2), (player->pos.x + (WndWight / Size) / 2), 0, WndHeight / Size, 0, 1);
+}
+void WndResize() {
+    glLoadIdentity();
+    glViewport(0, 0, WndWight, WndHeight);
+    glOrtho(0, WndWight / Size, 0, WndHeight / Size, 0, 1);
 }
 Pos GetMousePos(LPARAM lParam) {
     return { float(LOWORD(lParam) / Size), float((WndHeight - HIWORD(lParam)) / Size) };
