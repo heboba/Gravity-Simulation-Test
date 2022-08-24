@@ -119,8 +119,8 @@ float GetDist(float cord1, float cord2, float cord3, float cord4)
 }
 bool ResolveColisions(Entity& entity, Object& object, Pos VecMove) {
 
-    if (CheckColisions(entity, object)) {
-        while (CheckColisions(entity,object, {0,0}))
+    if (CheckColisions(entity, object, {0,0},n)) {
+        while (CheckColisions(entity,object, {0,0},n))
         {
             entity.pos.y += 1;
         }
@@ -145,28 +145,28 @@ bool ResolveColisions(Entity& entity, Object& object, Pos VecMove) {
         h = GetDist(entity.pos.y, entity.pos2.y, object.pos.y, object.pos2.y);
         h2 = entity.pos.y + entity.pos2.y + entity.MoveVec.y - (entity.pos.y + entity.pos2.y);
 
-        kof = (1 - h / h2) + 0.01;
-        entity.MoveVec = { entity.MoveVec.x - entity.MoveVec.x * kof,entity.MoveVec.y - entity.MoveVec.y * kof };
+        kof = (1 - h / h2);
+        entity.MoveVec = { entity.MoveVec.x,entity.MoveVec.y - entity.MoveVec.y * kof };
         return true;
     case Left:
         d = GetDist(entity.pos.x, entity.pos2.x, object.pos.x, object.pos2.x);
         d2 = entity.pos.x + entity.pos2.x + entity.MoveVec.x - (entity.pos.x + entity.pos2.x);
 
-        kof = (1 - d / d2) + 0.01;
+        kof = (1 - d / d2);
         entity.MoveVec = { entity.MoveVec.x - entity.MoveVec.x * kof,entity.MoveVec.y};
         return false;
     case Right:
         d = GetDist(entity.pos.x, entity.pos2.x, object.pos.x, object.pos2.x);
         d2 = entity.pos.x + entity.pos2.x - (entity.pos.x + entity.pos2.x + entity.MoveVec.x);
 
-        kof = (1 - d / d2) + 0.01;
+        kof = (1 - d / d2);
         entity.MoveVec = { entity.MoveVec.x - entity.MoveVec.x * kof,entity.MoveVec.y };
         return false;
     }
 }
 Type CheckColSide(Entity &entity, Object &object, Pos VecMove) {
-    float h = GetDist(entity.pos.y, entity.pos2.y, object.pos.y, object.pos2.y);
-    float d = GetDist(entity.pos.x, entity.pos2.x, object.pos.x, object.pos2.x);
+    float h = GetDist(entity.pos.y + n, entity.pos2.y - 2*n, object.pos.y, object.pos2.y);
+    float d = GetDist(entity.pos.x + n, entity.pos2.x - 2*n, object.pos.x, object.pos2.x);
 
     if (h == 0 || entity.MoveVec.y == 0) return VecMove.x > 0 ? Left : Right;
     if (d == 0 || entity.MoveVec.x == 0) return VecMove.y < 0 ? Top : Bottom;
@@ -179,10 +179,10 @@ Type CheckColSide(Entity &entity, Object &object, Pos VecMove) {
 //Colisions Check
 bool CheckColisions(Object& object, Object& object2, Pos MoveVec, float n) {
     Pos nextPos = object.pos + MoveVec;
-    float xA[2] = { nextPos.x,nextPos.x + object.pos2.x };
+    float xA[2] = { nextPos.x + (n > 0 ? n : -n),nextPos.x + object.pos2.x - (n > 0 ? n : -n) };
     float xB[2] = { object2.pos.x ,object2.pos.x + object2.pos2.x };
 
-    float yA[2] = { nextPos.y + n,nextPos.y + object.pos2.y };
+    float yA[2] = { nextPos.y + n,nextPos.y + object.pos2.y - (n > 0?n: -n) };
     float yB[2] = { object2.pos.y ,object2.pos.y + object2.pos2.y };
 
     if (xA[1] < xB[0] || yA[1] < yB[0] || yA[0] > yB[1] || xA[0] > xB[1]) return false;

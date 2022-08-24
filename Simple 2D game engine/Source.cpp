@@ -316,7 +316,7 @@ void Init() {
     player = new Player();
 
     player->pos = { 30,15 };
-    player->pos2 = { 3.99,7.99 };
+    player->pos2 = { 4,8 };
     player->color[1] = 0;
 
 
@@ -349,19 +349,37 @@ void MainLoop() {
     SwapBuffers(hDC);
     Sleep(1);
 }
+
+
+bool CheckAllColisions() {
+    for (int i = 1; i < DrawList.size(); i++) {
+        if (CheckColisions(*player, *DrawList.at(i), player->MoveVec, n) || CheckColisions(*player, *DrawList.at(i), { 0,0 }, n)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+
 void Update() {
 
     player->Move();
     bool UpOrDown = false;
     player->OnGround = false;
+    while (CheckAllColisions()) {
+        for (int i = 1; i < DrawList.size(); i++)
+        {
+            if (CheckColisions(*player, *DrawList.at(i), player->MoveVec, n) || CheckColisions(*player, *DrawList.at(i), { 0,0 }, n)) {
+                cout << "Check Col\n";
+                UpOrDown = ResolveColisions(*player, *DrawList.at(i), player->MoveVec);
+            }
+            //Check for staing on Object
+        }
+    }
     for (int i = 1; i < DrawList.size(); i++)
     {
-        if (CheckColisions(*player, *DrawList.at(i), player->MoveVec, n) || CheckColisions(*player, *DrawList.at(i), {0,0}, n)) {
-            cout << "Check Col\n";
-            UpOrDown = ResolveColisions(*player, *DrawList.at(i), player->MoveVec);
-        }
         //Check for staing on Object
-        if (CheckColisions(*player, *DrawList.at(i), player->MoveVec, -n) || CheckColisions(*player, *DrawList.at(i), {0,0}, -n)) {
+        if (CheckColisions(*player, *DrawList.at(i), player->MoveVec, -n) || CheckColisions(*player, *DrawList.at(i), { 0,0 }, -n)) {
             cout << "Check Ground\n";
             player->OnGround = true;
             UpOrDown = true;
