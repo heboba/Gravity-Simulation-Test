@@ -5,12 +5,14 @@
 #include "Varibles.h"
 #include "Source.h"
 
+
 #define STB_IMAGE_IMPLEMENTATION
 #include "include/stb_image.h"
 
 using namespace std;
 namespace fs = std::filesystem;
 
+map<string, unsigned int> TexturesAtlas;
 
 void EnableOpenGL(HWND hwnd, HDC* hDC, HGLRC* hRC)
 {
@@ -74,53 +76,24 @@ Pos GetMousePos(LPARAM lParam) {
     return { float(LOWORD(lParam) / Size), float((WndHeight - HIWORD(lParam)) / Size) };
 };
 
-//Clever unused Stuff
-bool IsParall(float a1, float a2, float b1, float b2)
-{
-    if ((a1 / a2) == (b1 / b2))
-    {
-        return false;
-    }
-    return true;
-}
-Pos Intersect(Pos pos1, Pos pos2, Pos pos3, Pos pos4)
-{
-
-    float a1 = pos1.y - pos2.y;
-    float b1 = pos2.x - pos1.x;
-    float c1 = pos1.x * pos2.y - pos2.x * pos1.y;
-    float a2 = pos3.y - pos4.y;
-    float b2 = pos4.x - pos3.x;
-    float c2 = pos3.x * pos4.y - pos4.x * pos3.y;
-
-
-    double det = a1 * b2 - a2 * b1;
-    float x = (b1 * c2 - b2 * c1) / det;
-    float y = (a2 * c1 - a1 * c2) / det;
-    return { x,y };
-}
-bool LineSegmentsIntersection(Pos pos1, Pos pos2, Pos pos3, Pos pos4)
-{
-    double _1 = pos1.x - pos2.x;
-    double _2 = pos1.x - pos3.x;
-    double _3 = pos3.x - pos4.x;
-    double _4 = pos1.y - pos2.y;
-    double _5 = pos1.y - pos3.y;
-    double _6 = pos3.y - pos4.y;
-    double d = _1 * _6 - _4 * _3;
-    double t = (_2 * _6 - _5 * _3) / d;
-    double u = (_2 * _4 - _5 * _1) / d;
-    return t >= 0. && t <= 1. && u >= 0. && u <= 1.;
-}
-
 //For Colisions
 float GetDist(float cord1, float cord2, float cord3, float cord4)
 {
     if (cord1 > cord3 + cord4) return cord1 - (cord3 + cord4);
     if (cord1 + cord2 < cord3) return cord3 - (cord1 + cord2);
-    //return cord1 - cord3;
     return 0;
 }
+Pos GetDistv2(Object& object, Object& object2) {
+    Pos pos = {0,0};
+    if (object.Get('T') < object2.Get('D')) pos.y = object2.Get('D') - object.Get('T');
+    if (object.Get('D') > object2.Get('T')) pos.y = object.Get('D') - object2.Get('T');
+
+    if (object.Get('R') < object2.Get('L')) pos.x = object2.Get('L') - object.Get('R');
+    if (object.Get('L') > object2.Get('R')) pos.x = object.Get('L') - object2.Get('R');
+
+    return pos;
+}
+
 bool ResolveColisions(Entity& entity, Object& object, Pos VecMove) {
 
     if (CheckColisions(entity, object, {0,0},n)) {
@@ -131,41 +104,34 @@ bool ResolveColisions(Entity& entity, Object& object, Pos VecMove) {
         return true;
     }
 
-
-
+    float d = 0, d2 = 0, kof = 0;
     Type t = CheckColSide(entity, object, VecMove);
-    float d = 0, d2 = 0, h = 0, h2 = 0, kof = 0;
+
+    if (abs(t) == Top) {
+        d = GetDistv2(entity, object).y;
+        d2 = abs(entity.MoveVec.y);
+
+        kof = (1 - d / d2);
+    }
+
+    if (abs(t) == Right) {
+        d = GetDistv2(entity, object).x;
+        d2 = abs(entity.MoveVec.x);
+
+        kof = (1 - d / d2);
+
+        entity.MoveVec = entity.MoveVec - Pos{entity.MoveVec.x* kof, 0 };
+        return false;
+    }
 
     switch (t)
     {
     case Top:
-        h = GetDist(entity.pos.y, entity.pos2.y, object.pos.y, object.pos2.y);
-        h2 = entity.pos.y + entity.pos2.y - (entity.pos.y + entity.pos2.y + entity.MoveVec.y);
-
-        kof = (1 - h / h2);
-        entity.MoveVec = { entity.MoveVec.x - entity.MoveVec.x * kof,entity.MoveVec.y - entity.MoveVec.y * kof };
+        entity.MoveVec = entity.MoveVec - Pos{entity.MoveVec.x* kof, entity.MoveVec.y* kof};
         return true;
     case Bottom:
-        h = GetDist(entity.pos.y, entity.pos2.y, object.pos.y, object.pos2.y);
-        h2 = entity.pos.y + entity.pos2.y + entity.MoveVec.y - (entity.pos.y + entity.pos2.y);
-
-        kof = (1 - h / h2);
         entity.MoveVec = { entity.MoveVec.x,entity.MoveVec.y - entity.MoveVec.y * kof };
         return true;
-    case Left:
-        d = GetDist(entity.pos.x, entity.pos2.x, object.pos.x, object.pos2.x);
-        d2 = entity.pos.x + entity.pos2.x + entity.MoveVec.x - (entity.pos.x + entity.pos2.x);
-
-        kof = (1 - d / d2);
-        entity.MoveVec = { entity.MoveVec.x - entity.MoveVec.x * kof,entity.MoveVec.y};
-        return false;
-    case Right:
-        d = GetDist(entity.pos.x, entity.pos2.x, object.pos.x, object.pos2.x);
-        d2 = entity.pos.x + entity.pos2.x - (entity.pos.x + entity.pos2.x + entity.MoveVec.x);
-
-        kof = (1 - d / d2);
-        entity.MoveVec = { entity.MoveVec.x - entity.MoveVec.x * kof,entity.MoveVec.y };
-        return false;
     }
 }
 Type CheckColSide(Entity &entity, Object &object, Pos VecMove) {
@@ -190,7 +156,7 @@ bool CheckColisions(Object& object, Object& object2, Pos MoveVec, float n) {
     float yB[2] = { object2.pos.y ,object2.pos.y + object2.pos2.y };
 
     if (xA[1] < xB[0] || yA[1] < yB[0] || yA[0] > yB[1] || xA[0] > xB[1]) return false;
-    cout << "Colisions error. Move vec =" << MoveVec.x << " " << MoveVec.y << ". Object pos = " << object2.pos.x << " " << object2.pos.y << endl;
+    if (n > 0) cout << "Colisions error. Move vec =" << MoveVec.x << " " << MoveVec.y << ". Object pos = " << object2.pos.x << " " << object2.pos.y << endl;
     return true;
 }
 bool CheckColisions(Pos pos, Object& object) {
@@ -238,15 +204,15 @@ void SetCharSize(unsigned char* data, int widht, int cnt, float* cWidthArray, in
         cWidthArray[k] = (i - x) / (float)pixPerChar;
     }
 }
-void LoadTexture(string filename, unsigned int* target) {
+void LoadTexture(string path, string filename, unsigned int* target) {
     int width, height, cnt;
-    unsigned char* data = stbi_load(filename.c_str(), &width, &height, &cnt, 0);
+    unsigned char* data = stbi_load((path + filename).c_str(), &width, &height, &cnt, 0);
 
-    if (filename == "textures/text/Verdana_B_alpha.png") SetCharSize(data, width, cnt, charWidthArray, 3);
+    if (filename == "Verdana_B_alpha.png") SetCharSize(data, width, cnt, charWidthArray, 3);
 
     cout << "Loaded texture: " << filename.c_str() << endl;
-    glGenTextures(1, target);
-    glBindTexture(GL_TEXTURE_2D, *target);
+    glGenTextures(1, &TexturesAtlas[filename]);
+    glBindTexture(GL_TEXTURE_2D, TexturesAtlas[filename]);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
@@ -259,42 +225,15 @@ void TexturesInit() {
     int i = 0;
     std::string path = "textures/tex";
     for (const auto& entry : fs::directory_iterator(path)) {
-        LoadTexture((string)"textures/tex/" + entry.path().filename().string().c_str(), &textures[i]);
+        LoadTexture((string)"textures/tex/", entry.path().filename().string().c_str(), &textures[i]);
         i++;
     }
-    LoadTexture("textures/text/Verdana_B_alpha.png", &TextTex);
+    LoadTexture("textures/text/" , "Verdana_B_alpha.png", &TextTex);
 }
 
 void Draw(Object& object, Pos& Camera) {
-    /*glEnable(GL_TEXTURE_2D);
-    glBindTexture(GL_TEXTURE_2D, textures[0]);
-
-    glPushMatrix();
-    glColor3f(object.color[0], object.color[1], object.color[2]);
-
-    glTranslatef(object.pos.x, object.pos.y, 0);
-
-    glBegin(GL_TRIANGLE_FAN);
-    glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-
-    float texCord2[] = { 0,0,0,object.pos2.y ,object.pos2.x, object.pos2.y ,object.pos2.x, 0 };
-
-    glTexCoordPointer(2, GL_FLOAT, 0, texCord2);
-
-    glVertex2f(0, 0);
-    glVertex2f(0, object.pos2.y);
-    glVertex2f(object.pos2.x, object.pos2.y);
-    glVertex2f(object.pos2.x, 0);
-
-    glEnd();
-    glDisableClientState(GL_TEXTURE_COORD_ARRAY);
-
-    glPopMatrix();
-
-    glDisable(GL_TEXTURE_2D);*/
-
     glEnable(GL_TEXTURE_2D);
-    glBindTexture(GL_TEXTURE_2D, textures[0]);
+    glBindTexture(GL_TEXTURE_2D, TexturesAtlas[object.texture]);
 
     glColor3f(object.color[0], object.color[1], object.color[2]);
     glPushMatrix();
@@ -316,31 +255,9 @@ void Draw(Object& object, Pos& Camera) {
 
     glPopMatrix();
 }
-void Drawv2() {
+void DrawText(string str, float x,float y, float Scale, float limit) {
     glEnable(GL_TEXTURE_2D);
-    glBindTexture(GL_TEXTURE_2D, textures[0]);
-
-    glColor3f(1, 1, 1);
-    glPushMatrix();
-
-    glEnableClientState(GL_VERTEX_ARRAY);
-    glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-
-    glVertexPointer(3, GL_FLOAT, 0, vertex);
-    glTexCoordPointer(2, GL_FLOAT, 0, texCord);
-    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-
-    glDisableClientState(GL_VERTEX_ARRAY);
-    glDisableClientState(GL_TEXTURE_COORD_ARRAY);
-
-    glDisable(GL_TEXTURE_2D);
-
-    glPopMatrix();
-}
-
-void DrawText(string str, float x,float y, float Scale) {
-    glEnable(GL_TEXTURE_2D);
-    glBindTexture(GL_TEXTURE_2D, TextTex);
+    glBindTexture(GL_TEXTURE_2D, TexturesAtlas["Verdana_B_alpha.png"]);
     glColor3f(1, 0.2, 0.2);
     glPushMatrix();
     glTranslatef(x, WndHeight / (float)Size - Scale - y, 0);
@@ -351,9 +268,16 @@ void DrawText(string str, float x,float y, float Scale) {
     float charsize = 1 / 16.0;
     Pos charPos;
 
+    float lengh = 0;
+    
+
     glVertexPointer(3, GL_FLOAT, 0, vertex);
     for (int i : str)
     {
+        lengh += charWidthArray[i];
+
+        if (lengh > limit) break;
+
         charPos = Pos{ float(i % 16), float(i / 16) };
         float textTexCord[] = { charsize * charPos.x + charsize,charsize * charPos.y, charsize * charPos.x,charsize * charPos.y, charsize * charPos.x + charsize,charsize * charPos.y + charsize, charsize * charPos.x,charsize * charPos.y + charsize };
         glTexCoordPointer(2, GL_FLOAT, 0, textTexCord);

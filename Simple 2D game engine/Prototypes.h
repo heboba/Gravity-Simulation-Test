@@ -11,7 +11,7 @@ Pos GetMousePos(LPARAM lParam);
 void InitWindow();
 void MainLoop();
 void Init();
-void Draw(Object& object);
+void Draw(Object& object, Pos& Camera);
 void CalculatePhisic(Entity& entity);
 bool CheckColisions(Object& object, Object& object2, Pos MoveVec = { 0,0 }, float n = 0);
 bool CheckColisions(Pos pos, Object& object);
@@ -34,6 +34,6 @@ bool LineSegmentsIntersection(Pos pos1, Pos pos2, Pos pos3, Pos pos4);
 void SetCharSize(unsigned char* data, int widht, int cnt, float* cWidthArray, int checkByte);
 void LoadTexture(string filename, unsigned int* target);
 void TexturesInit();
-void DrawText(string str, float x, float y, float Scale);
+void DrawText(string str, float x, float y, float Scale, float limit = 999);
 void Drawv2();
 

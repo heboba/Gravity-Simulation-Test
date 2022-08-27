@@ -28,5 +28,4 @@ EditActionType EditType = None;
 Pos Camera = { 0,0 };
 
 
-
 vector <Object*> DrawList;

@@ -6,6 +6,7 @@
 #include <vector>
 #include <math.h>
 #include <cmath>
+#include <map>
 #pragma comment(lib, "opengl32.lib")
 
 #include "Prototypes.h"

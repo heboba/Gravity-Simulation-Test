@@ -311,6 +311,9 @@ void LoadGame(std::string name) {
         }
     }
 }
+
+void LoadTexturesButtons();
+
 void Init() {
     glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
     glOrtho(0, WndWight / Size, 0, WndHeight / Size, 0, 1);
@@ -346,12 +349,109 @@ void Init() {
     SaveGame("Autosave.json");
     DrawList.clear();
     LoadGame("Autosave.json");
+
+    LoadTexturesButtons();
     
 
 
     //DrawList.push_back(new Object(40,20,5,5));
 
     HANDLE hThr = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)FixedUpdate, 0, 0, NULL);
+}
+
+struct Button
+{
+    Pos pos1;
+    Pos pos2;
+    string name;
+    Button(float x1, float y1, float x2, float y2, string name) {
+        this->name = name;
+        pos1 = { x1,y1 };
+        pos2 = { x2,y2 };
+    }
+    Button(string name) {
+        this->name = name;
+    }
+};
+
+vector<Button> Buttons;
+
+void LoadTexturesButtons() {
+    std::string path = "textures/tex";
+    for (const auto& entry : fs::directory_iterator(path)) {
+        Buttons.push_back(Button(entry.path().filename().string()));
+    }
+}
+
+float SCALE = 2;
+
+void DrawButton(Button& button) {
+    glPushMatrix();
+
+    glColor3f(1, 1, 1);
+
+    glEnableClientState(GL_VERTEX_ARRAY);
+
+    glTranslatef(button.pos1.x, WndHeight/Size - button.pos1.y, 0);
+
+    float vertex2[] = { 0,0,0,0,-button.pos2.y,0 ,button.pos2.x, -button.pos2.y,0 ,button.pos2.x, 0,0 };
+    glVertexPointer(3, GL_FLOAT, 0, vertex2);
+    glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+
+    glDisableClientState(GL_VERTEX_ARRAY);
+
+    glPopMatrix();
+
+    DrawText(button.name, button.pos1.x + button.pos2.y, button.pos1.y, button.pos2.y, (button.pos2.x - button.pos2.y)/ button.pos2.y);
+
+    glPushMatrix();
+
+
+    glEnable(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, TexturesAtlas[button.name]);
+
+    glColor3f(1, 1, 1);
+
+    glTranslatef(button.pos1.x, WndHeight / Size - button.pos1.y, 0);
+
+    glEnableClientState(GL_VERTEX_ARRAY);
+    glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+
+    float vertex3[] = { 0,0,0,0,-button.pos2.y,0 ,button.pos2.y, -button.pos2.y,0 ,button.pos2.y, 0,0 };
+    //glScalef(1, 1, 1); 
+    glVertexPointer(3, GL_FLOAT, 0, vertex3);
+    glTexCoordPointer(2, GL_FLOAT, 0, texCord2);
+    glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+
+    glDisableClientState(GL_VERTEX_ARRAY);
+    glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+
+    glDisable(GL_TEXTURE_2D);
+
+    glPopMatrix();
+}
+
+void DrawMenu() {
+    glPushMatrix();
+
+    Object menu = { 5,5,WndWight / Size - 10,WndHeight / Size - 10 };
+    menu.texture = "Menu";
+    Pos pos = { 0,0 };
+
+    //Draw(menu, pos);
+    DrawText("Menu", 5, 5, SCALE);
+
+    int num = 0;
+    for (int i = 0;i<10 && Buttons.size() > i + num;i++) {
+
+        Buttons.at(i + num).pos1 = { 5,5 + SCALE + i * SCALE + i * SCALE/4};
+        Buttons.at(i + num).pos2 = { 30,2 };
+
+        DrawButton(Buttons.at(i + num));
+   
+    }
+
+    glPopMatrix();
 }
 
 void MainLoop() {
@@ -363,6 +463,15 @@ void MainLoop() {
         if (EditMode) DrawText("Edit mode active!", 0, 2, 1.5);
         //Drawv2();
         Draw(*DrawList[i], Camera);
+
+        //LoadTexturesButtons();
+        DrawMenu();
+        //Button btn("yellow_shulker_box.png");
+        //btn.pos1 = { 10,10 };
+        //btn.pos2 = { 30,2 };
+
+        //DrawButton(btn);
+
     }
     SwapBuffers(hDC);
     Sleep(1);
@@ -381,6 +490,8 @@ void Update() {
 
     while (CheckAllColisions(&col)) {
         if (!CheckColisions(*player, *col, player->MoveVec, n) && !CheckColisions(*player, *col, { 0,0 }, n)) continue;
+
+        cout << "Resolving..." << endl;
 
         !UpOrDown ? UpOrDown = ResolveColisions(*player, *col, player->MoveVec) : ResolveColisions(*player, *col, player->MoveVec);
     }
